@@ -29,8 +29,7 @@ class lrucache:
             cnode.prev.next = cnode.next
         if cnode.next != None:
             cnode.next.prev = cnode.prev
-        if cnode == self.tail:
-            tail = cnode.prev
+        self.tail = cnode.prev
         cnode.next = None
         cnode.prev = None
         return cnode
@@ -42,6 +41,7 @@ class lrucache:
             # found in the hmap, it must be in the cache, update cache
             # check if its already at head
             if cnode == self.head:
+                cnode.value = value
                 return
             cnode = self.cache_remove_node(self, cnode)
             self.cache_insert_at_head(self, cnode)
@@ -85,17 +85,18 @@ class lrucache:
 def app_cache():
     lru = lrucache(3)
     lru.put_kv("hello", "world")
-    lru.put_kv("hello", "mandar")
-    lru.put_kv("welcome", "Indu")
-    lru.put_kv("Sweet", "Advay")
-    lru.put_kv("cute", "Ivan")
+    lru.put_kv("love", "nature")
+    lru.put_kv("cool", "animals")
+    lru.put_kv("amazing", "oceans")
+    lru.put_kv("amazing", "forrests")
+    lru.put_kv("bad", "people")
 
     print(lru.capacity, lru.curr_size)
     lru.lru_print()
-    print("printing lru cache: ", lru.get_kv("welcome"))
+    print("printing lru cache: ", lru.get_kv("cool"))
     lru.lru_print()
+    print("printing lru cache: ", lru.get_kv("amazing"))
     print("printing lru cache: ", lru.get_kv("hello"))
-    print("printing lru cache: ", lru.get_kv("Sweet"))
     lru.lru_print()
 
 app_cache()
