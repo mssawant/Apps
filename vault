@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import pyaes
+import pbkdf2
+import binascii
+import secrets
+import base64
+
+def encrypt(opts):
+    readpath = opts.InputFile.name
+    writepath = opts.out_file
+    password = opts.password
+    psalt =  opts.salt
+    psalt_b = bytes(psalt, 'utf-8')
+    key = pbkdf2.PBKDF2(password, psalt_b).read(32)
+    iv = secrets.randbits(256)
+    # print('1 key: ', key, 'iv: ', iv)
+    aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
+    with open(readpath, 'r') as rf:
+        with open(writepath, 'w') as wf:
+            line = rf.readline()
+            wf.write(f'{iv}\n')
+            while line:
+                # print('line: ', line)
+                cipherline = aes.encrypt(line)
+                # print('cipherline: ', cipherline, 'type: ', type(cipherline))
+                wf.write(f'{binascii.hexlify(cipherline).decode()}\n')
+                line = rf.readline()
+                # print('decrypted pass: ', pw_d)
+
+def decrypt(opts):
+    readpath = opts.InputFile.name
+    writepath = opts.out_file
+    password = opts.password 
+    psalt = opts.salt 
+    psalt_b = bytes(psalt, 'utf-8')
+    key = pbkdf2.PBKDF2(password, psalt_b).read(32)
+    with open(readpath, 'r') as rf:
+        iv = rf.readline()
+        # print('2 key: ', key, 'iv: ', int(iv))
+        aes2 = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(int(iv)))
+        with open(writepath, 'w+') as wf:
+            line = rf.readline()
+            while line:
+                # print('line_enc: ', bytes.fromhex(line))
+                line_b = bytes.fromhex(line)
+                # print('line_b: ', line_b, 'type: ', type(line_b))
+                pw_d = aes2.decrypt(bytes(line_b))
+                # print('decrypted pass: ', pw_d)
+                wf.write(f'{pw_d}\n')
+                line = rf.readline()
+
+
+def parse_opts(argv):
+    p = argparse.ArgumentParser(description='Encrypt or decrypt your secrets.'
+                                ' Encrypt operation generates a text file with all the encrypted secrets.'
+                                ' Make sure the encrypted file is saved.'
+                                ' Decrypt operation generates a text file with the decrypted (human readable)'
+                                ' secrets.',
+                                usage='%(prog)s [OPTION]... inputFile')
+    p.add_argument('InputFile', type=argparse.FileType(),
+                   help='Plain secrets or encrypted secrets file')
+    p.add_argument('--output-file',
+                   help='output file path, default path is ./vault.out',
+                   dest='out_file',
+                   default='vault.out')
+    p.add_argument('--password',
+                   help='Encryption password',
+                   dest='password',
+                   default='UseBetterPassword#1123')
+    p.add_argument('--salt',
+                   help='Encryption salt',
+                   dest='salt',
+                   default='UseBetterSalt#1123')
+    p.add_argument('--encrypt',
+                   help='Encrypt Secrets. Output will be saved in $output_file',
+                   action='store_true')
+    p.add_argument('--decrypt',
+                   help='Decrypt Secrets. Output will be saved in $output_file',
+                   action='store_true')
+    opts = p.parse_args(argv)
+
+    if opts.encrypt:
+        encrypt(opts)
+    elif opts.decrypt:
+        decrypt(opts)
+    else:
+        print('Please specify the operation, encrypt or decrypt, check help for more information')
+
+def main(argv=None):
+    parse_opts(argv)
+
+if __name__ == '__main__':
+    main()
+    
